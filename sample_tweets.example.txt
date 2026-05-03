@@ -1,0 +1,4 @@
+# Replace these with newline-delimited posts from your own account.
+Building small tools is easier when the first version is honest about what it cannot do yet.
+I keep coming back to simple systems: clear inputs, boring defaults, and logs that explain the last decision.
+Shipping today: one useful behavior, no drama, and enough notes for tomorrow-me to understand it.

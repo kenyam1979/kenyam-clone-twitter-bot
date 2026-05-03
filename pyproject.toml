@@ -1,0 +1,13 @@
+[project]
+name = "twitter-bot"
+version = "0.1.0"
+description = "A LangChain-powered bot that drafts tweets in the style of a user's own account."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langsmith>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "tweepy>=4.14.0",
+]
