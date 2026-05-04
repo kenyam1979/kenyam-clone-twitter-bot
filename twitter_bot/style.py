@@ -22,15 +22,23 @@ STYLE_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a writing-style analyst. Infer reusable style traits from "
-            "the supplied posts. Do not copy phrases, claims, private details, "
-            "or named entities unless they are part of the requested topic.",
+            "あなたは日本語の投稿文体を分析する編集者です。渡された投稿から、"
+            "再利用できる文体の特徴だけを抽出してください。表現、主張、私的な"
+            "情報、固有名詞をそのままコピーしてはいけません。出力は必ず日本語"
+            "にしてください。",
         ),
         (
             "human",
-            "Analyze these posts and return a compact style guide with tone, "
-            "sentence length, punctuation habits, emoji/hashtag use, and topics "
-            "to avoid copying verbatim.\n\nPosts:\n{sample_tweets}",
+            "以下の投稿を分析し、今後のツイート作成に使える簡潔な日本語の"
+            "スタイルガイドを作成してください。\n\n"
+            "含める内容:\n"
+            "- 口調と距離感\n"
+            "- 文の長さと改行の癖\n"
+            "- 句読点、記号、絵文字、ハッシュタグの使い方\n"
+            "- よく扱う話題の方向性\n"
+            "- そのまま真似してはいけない要素\n"
+            "- 新しい投稿を書くときの注意点\n\n"
+            "投稿:\n{sample_tweets}",
         ),
     ]
 )

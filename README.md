@@ -10,6 +10,7 @@ account using sample posts that you provide. Drafts are written in Japanese.
 - `twitter_bot/convert_samples.py`: converts X API JSON into sample tweet text.
 - `twitter_bot/samples.py`: loads newline-delimited examples from your account.
 - `twitter_bot/style.py`: LangChain style-analysis chain.
+- `twitter_bot/trends.py`: fetches Japan trend context from Google News via SerpAPI.
 - `twitter_bot/generator.py`: LangChain tweet-drafting chain.
 - `twitter_bot/publisher.py`: optional X publishing boundary via Tweepy.
 
@@ -24,6 +25,12 @@ uv sync
 ```
 
 Then edit `.env` and set `OPENAI_API_KEY`.
+
+Optional SerpAPI key for Google News trend lookup:
+
+```bash
+SERPAPI_API_KEY=...
+```
 
 Optional model override:
 
@@ -101,6 +108,24 @@ Publish from a saved style guide:
 
 ```bash
 uv run python main.py --style-guide style_guide.txt --topic "launching a weekend side project" --post
+```
+
+Draft from a likely viral Japan trend found through Google News via SerpAPI:
+
+```bash
+uv run python main.py --style-guide style_guide.txt --japan-trend
+```
+
+Publish a tweet from that trend context:
+
+```bash
+uv run python main.py --style-guide style_guide.txt --japan-trend --post
+```
+
+Use a custom Google query:
+
+```bash
+uv run python main.py --style-guide style_guide.txt --japan-trend --trend-query "日本 AI 今日 話題"
 ```
 
 ## Notes

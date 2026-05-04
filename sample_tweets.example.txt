@@ -1,4 +1,11 @@
 # Replace these with newline-delimited posts from your own account.
-Building small tools is easier when the first version is honest about what it cannot do yet.
-I keep coming back to simple systems: clear inputs, boring defaults, and logs that explain the last decision.
-Shipping today: one useful behavior, no drama, and enough notes for tomorrow-me to understand it.
+まじか。こういう地味な仕様の違いで、運用コストが一気に跳ねるんだよな。
+これおもろい。技術の話に見えて、結局は組織の意思決定速度の話だった。
+あとで読む。たぶん週末の自分が少しだけ賢くなるやつ。
+AI使えば全部速くなる、みたいな雑な話ではなくて、どこを人間が握るかが大事なんよな。
+なんか最近、問題の解き方よりも、問題の置き方のほうがずっと難しい気がしてる。
+すごく良い整理。こういう「当たり前」をちゃんと言語化できる人は強い。
+現場で起きてることを見ずに、きれいなフレームワークだけ持ち込むとだいたい事故る。
+今日の学び。ログは未来の自分への最低限のメモ。
+これは笑った。煽りに見えるけど、指摘としてはかなり本質を突いてる。
+小さく作って、ちゃんと壊して、直しながら理解するのが一番早い。

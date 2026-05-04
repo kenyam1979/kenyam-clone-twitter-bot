@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from twitter_bot.config import BotConfig
+from twitter_bot.trends import DEFAULT_JAPAN_TREND_QUERY
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -19,8 +20,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--topic",
-        required=True,
         help="Topic or intent for the new tweet.",
+    )
+    parser.add_argument(
+        "--japan-trend",
+        action="store_true",
+        help="Fetch a likely viral Japan trend from Google Search via SerpAPI.",
+    )
+    parser.add_argument(
+        "--trend-query",
+        default=DEFAULT_JAPAN_TREND_QUERY,
+        help="Google query to use with --japan-trend.",
+    )
+    parser.add_argument(
+        "--trend-results",
+        type=int,
+        default=5,
+        help="Number of SerpAPI search results to summarize. Defaults to 5.",
     )
     parser.add_argument(
         "--max-chars",
@@ -41,16 +57,32 @@ def main() -> None:
 
     args = build_parser().parse_args()
     config = BotConfig.from_env()
+    if not args.topic and not args.japan_trend:
+        raise ValueError("Either --topic or --japan-trend is required.")
+
     style_guide = Path(args.style_guide).read_text(encoding="utf-8").strip()
     if not style_guide:
         raise ValueError(f"Style guide file is empty: {args.style_guide}")
+
+    topic = args.topic
+    if args.japan_trend:
+        from twitter_bot.trends import JapanTrendFetcher
+
+        trend = JapanTrendFetcher(config).fetch(
+            query=args.trend_query,
+            limit=args.trend_results,
+        )
+        topic = trend.as_topic(extra_intent=args.topic)
+        print("Fetched Japan trend context from Google Search via SerpAPI:")
+        for result in trend.results:
+            print(f"- {result.title}")
 
     from twitter_bot.generator import TweetGenerator
 
     generator = TweetGenerator(config)
     draft = generator.draft(
         style_guide=style_guide,
-        topic=args.topic,
+        topic=topic,
         max_chars=args.max_chars,
     )
 

@@ -17,6 +17,7 @@ class BotConfig:
     x_bearer_token: str | None = None
     x_access_token: str | None = None
     x_access_token_secret: str | None = None
+    serpapi_api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> "BotConfig":
@@ -34,6 +35,7 @@ class BotConfig:
             x_access_token=os.getenv("X_ACCESS_TOKEN") or os.getenv("TWITTER_ACCESS_TOKEN"),
             x_access_token_secret=os.getenv("X_ACCESS_TOKEN_SECRET")
             or os.getenv("TWITTER_ACCESS_TOKEN_SECRET"),
+            serpapi_api_key=os.getenv("SERPAPI_API_KEY"),
         )
 
     @property
