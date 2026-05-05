@@ -1,4 +1,4 @@
-"""Convert X API tweet JSON into newline-delimited sample tweets."""
+"""Convert X API or archive tweet JSON into newline-delimited sample tweets."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ if __package__ in ("", None):
 
 URL_PATTERN = re.compile(r"https?://\S+")
 WHITESPACE_PATTERN = re.compile(r"\s+")
+X_ARCHIVE_PREFIX = "window.YTD.tweets.part0"
 
 
 def normalize_tweet_text(text: str, keep_urls: bool = False) -> str:
@@ -25,9 +26,22 @@ def normalize_tweet_text(text: str, keep_urls: bool = False) -> str:
     return WHITESPACE_PATTERN.sub(" ", normalized).strip()
 
 
+def load_payload(path: str) -> Any:
+    raw_text = Path(path).read_text(encoding="utf-8").strip()
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        if not raw_text.startswith(X_ARCHIVE_PREFIX):
+            raise
+
+        _, separator, json_text = raw_text.partition("=")
+        if not separator:
+            raise ValueError(f"Expected X archive assignment in {path}")
+        return json.loads(json_text.strip().removesuffix(";"))
+
+
 def load_raw_tweets(path: str) -> list[dict[str, Any]]:
-    raw_path = Path(path)
-    payload = json.loads(raw_path.read_text(encoding="utf-8"))
+    payload = load_payload(path)
 
     if isinstance(payload, dict) and isinstance(payload.get("data"), list):
         return payload["data"]
@@ -35,8 +49,24 @@ def load_raw_tweets(path: str) -> list[dict[str, Any]]:
         return payload
 
     raise ValueError(
-        "Expected an X API response with a data list, or a raw list of tweet objects."
+        "Expected an X API response with a data list, an X archive tweets.js file, "
+        "or a raw list of tweet objects."
     )
+
+
+def extract_tweet_text(tweet: dict[str, Any]) -> str | None:
+    archive_tweet = tweet.get("tweet")
+    if isinstance(archive_tweet, dict):
+        if archive_tweet.get("retweeted") is True:
+            return None
+        return extract_tweet_text(archive_tweet)
+
+    text = tweet.get("text") or tweet.get("full_text")
+    if not isinstance(text, str):
+        return None
+    if tweet.get("retweeted") is True or text.startswith("RT @"):
+        return None
+    return text
 
 
 def convert_tweets(
@@ -56,8 +86,8 @@ def convert_tweets(
     samples: list[str] = []
     seen: set[str] = set()
     for tweet in tweets:
-        text = tweet.get("text")
-        if not isinstance(text, str):
+        text = extract_tweet_text(tweet)
+        if text is None:
             continue
 
         sample = normalize_tweet_text(text, keep_urls=keep_urls)
@@ -78,12 +108,12 @@ def convert_tweets(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Convert X API tweet JSON into sample tweets for style generation."
+        description="Convert X API JSON or archive tweets.js into sample tweets."
     )
     parser.add_argument(
         "--input",
         required=True,
-        help="Path to raw X API JSON, such as tweet_raw.txt.",
+        help="Path to raw X API JSON or an X archive tweets.js file.",
     )
     parser.add_argument(
         "--out",

@@ -11,6 +11,7 @@ wheels/
 
 # Local secrets and generated data
 .env
+data/
 tweet_raw.txt
 sample_tweets.txt
 style_guide.txt

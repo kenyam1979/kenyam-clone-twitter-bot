@@ -89,6 +89,12 @@ Or convert an X API JSON response like `tweet_raw.txt`:
 uv run python -m twitter_bot.convert_samples --input tweet_raw.txt --out sample_tweets.txt
 ```
 
+You can also convert an X archive export like `data/tweets.js`:
+
+```bash
+uv run python -m twitter_bot.convert_samples --input data/tweets.js --out data/sample_tweets.txt
+```
+
 Generate a reusable style guide:
 
 ```bash
