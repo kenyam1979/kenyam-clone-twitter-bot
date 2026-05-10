@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--japan-trend",
         action="store_true",
-        help="Fetch a likely viral Japan trend from Google Search via SerpAPI.",
+        help="Fetch and screen likely viral Japan trends from Google News via SerpAPI.",
     )
     parser.add_argument(
         "--trend-query",
@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--trend-results",
         type=int,
         default=5,
-        help="Number of SerpAPI search results to summarize. Defaults to 5.",
+        help="Number of screened SerpAPI news results to summarize. Defaults to 5.",
     )
     parser.add_argument(
         "--max-chars",
@@ -73,7 +73,7 @@ def main() -> None:
             limit=args.trend_results,
         )
         topic = trend.as_topic(extra_intent=args.topic)
-        print("Fetched Japan trend context from Google Search via SerpAPI:")
+        print("Fetched screened Japan trend context from Google News via SerpAPI:")
         for result in trend.results:
             print(f"- {result.title}")
 

@@ -10,7 +10,7 @@ account using sample posts that you provide. Drafts are written in Japanese.
 - `twitter_bot/convert_samples.py`: converts X API JSON into sample tweet text.
 - `twitter_bot/samples.py`: loads newline-delimited examples from your account.
 - `twitter_bot/style.py`: LangChain style-analysis chain.
-- `twitter_bot/trends.py`: fetches Japan trend context from Google News via SerpAPI.
+- `twitter_bot/trends.py`: fetches and screens Japan trend context from Google News via SerpAPI.
 - `twitter_bot/generator.py`: LangChain tweet-drafting chain.
 - `twitter_bot/publisher.py`: optional X publishing boundary via Tweepy.
 
@@ -121,6 +121,10 @@ Draft from a likely viral Japan trend found through Google News via SerpAPI:
 ```bash
 uv run python main.py --style-guide style_guide.txt --japan-trend
 ```
+
+Trend mode screens Google News results before drafting, filtering out low-fit
+items such as stock-price updates, market summaries, routine earnings notes,
+analyst notes, and generic corporate PR.
 
 Publish a tweet from that trend context:
 

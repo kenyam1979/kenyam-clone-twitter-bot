@@ -1,4 +1,4 @@
-"""Fetch trend context from Google Search through SerpAPI."""
+"""Fetch and screen trend context from Google News through SerpAPI."""
 
 from __future__ import annotations
 
@@ -16,6 +16,11 @@ from twitter_bot.config import BotConfig
 SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 DEFAULT_JAPAN_TREND_QUERY = "日本 テック トレンド"
 TITLE_SUFFIX_PATTERN = re.compile(r"\s*[|｜]\s*.+$")
+MARKET_NOISE_PATTERN = re.compile(
+    r"株価|日経平均|為替|決算|上方修正|下方修正|配当|"
+    r"ストップ高|ストップ安|急騰|急落|買い|売り|目標株価|"
+    r"前場|後場|大引け|東証|NASDAQ|ナスダック|NYSE|ダウ"
+)
 
 
 @dataclass(frozen=True)
@@ -33,7 +38,7 @@ class TrendBrief:
 
     def as_topic(self, extra_intent: str | None = None) -> str:
         lines = [
-            "Google Search via SerpAPIで見つけた日本の直近トレンド候補。",
+            "Google News via SerpAPIで見つけた日本の直近トレンド候補。",
             f"検索クエリ: {self.query}",
             "候補:",
         ]
@@ -47,12 +52,13 @@ class TrendBrief:
 
 
 class JapanTrendFetcher:
-    """Fetches likely viral Japan topics from Google Search through SerpAPI."""
+    """Fetches likely viral Japan topics from Google News through SerpAPI."""
 
     def __init__(self, config: BotConfig) -> None:
         if not config.serpapi_api_key:
             raise RuntimeError("SERPAPI_API_KEY is required for --japan-trend.")
         self._api_key = config.serpapi_api_key
+        self._screener = TrendScreener(config)
 
     def fetch(
         self,
@@ -77,9 +83,12 @@ class JapanTrendFetcher:
                 "safe": "active",
             }
         )
-        results = self._extract_results(payload, limit=limit)
+        candidates = self._extract_results(payload, limit=10)
+        results = self._screener.screen(candidates, limit=limit)
         if not results:
-            raise RuntimeError("SerpAPI returned no usable Google News results.")
+            raise RuntimeError(
+                "SerpAPI returned no usable screened Google News results."
+            )
         return TrendBrief(query=query, results=results)
 
     def _request(self, params: dict[str, str | int]) -> dict[str, Any]:
@@ -129,3 +138,88 @@ class JapanTrendFetcher:
 
     def _title_key(self, title: str) -> str:
         return TITLE_SUFFIX_PATTERN.sub("", title).casefold()
+
+
+class TrendScreener:
+    """Screens Google News results for tweet-worthy trend context."""
+
+    def __init__(self, config: BotConfig, temperature: float = 0.0) -> None:
+        from langchain_core.output_parsers import StrOutputParser
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(
+            api_key=config.openai_api_key,
+            model=config.openai_model,
+            temperature=temperature,
+        )
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You screen Japanese Google News results before a Twitter bot "
+                    "writes a short opinionated post. Keep items that are likely "
+                    "to be socially discussable, culturally viral, technology "
+                    "relevant, AI/software relevant, policy relevant, or useful "
+                    "for structural commentary. Reject stock-price movement, "
+                    "market summaries, earnings-only updates, analyst notes, "
+                    "routine corporate PR, commodity price updates, sports score "
+                    "recaps, celebrity gossip without broader social relevance, "
+                    "and duplicate/syndicated variants. Return only JSON.",
+                ),
+                (
+                    "human",
+                    "Choose up to {limit} items to keep. Return JSON in this exact "
+                    "shape: {{\"keep_indices\": [1, 2]}}\n\nResults:\n{results}",
+                ),
+            ]
+        )
+        self._chain = prompt | llm | StrOutputParser()
+
+    def screen(self, results: list[SearchResult], limit: int) -> list[SearchResult]:
+        if not results:
+            return []
+
+        prefiltered = [
+            result for result in results if not self._is_obvious_noise(result)
+        ]
+        if not prefiltered:
+            return []
+
+        payload = "\n".join(
+            self._format_result(index, result)
+            for index, result in enumerate(prefiltered, start=1)
+        )
+        try:
+            raw = self._chain.invoke({"limit": limit, "results": payload})
+            keep_indices = self._parse_keep_indices(raw)
+        except Exception:
+            return prefiltered[:limit]
+
+        screened: list[SearchResult] = []
+        for index in keep_indices:
+            if 1 <= index <= len(prefiltered):
+                screened.append(prefiltered[index - 1])
+            if len(screened) >= limit:
+                break
+        return screened
+
+    def _is_obvious_noise(self, result: SearchResult) -> bool:
+        text = f"{result.title} {result.snippet}"
+        return bool(MARKET_NOISE_PATTERN.search(text))
+
+    def _format_result(self, index: int, result: SearchResult) -> str:
+        source = f" source={result.source}" if result.source else ""
+        snippet = f" snippet={result.snippet}" if result.snippet else ""
+        return f"{index}. title={result.title}{source}{snippet}"
+
+    def _parse_keep_indices(self, raw: str) -> list[int]:
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.removeprefix("```json").removeprefix("```")
+            cleaned = cleaned.removesuffix("```").strip()
+        payload = json.loads(cleaned)
+        keep_indices = payload.get("keep_indices", [])
+        if not isinstance(keep_indices, list):
+            return []
+        return [index for index in keep_indices if isinstance(index, int)]
