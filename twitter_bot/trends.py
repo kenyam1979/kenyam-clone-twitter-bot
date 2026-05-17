@@ -15,6 +15,14 @@ from twitter_bot.config import BotConfig
 
 SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 DEFAULT_JAPAN_TREND_QUERY = "日本 テック トレンド"
+DEFAULT_JAPAN_TREND_QUERIES = [
+    DEFAULT_JAPAN_TREND_QUERY,
+    "日本 AI 話題",
+    "日本 テクノロジー 社会 話題",
+    "日本 SNSで話題 テクノロジー",
+    "日本 生成AI ニュース",
+]
+SERPAPI_CANDIDATE_COUNT = 20
 TITLE_SUFFIX_PATTERN = re.compile(r"\s*[|｜]\s*.+$")
 MARKET_NOISE_PATTERN = re.compile(
     r"株価|日経平均|為替|決算|上方修正|下方修正|配当|"
@@ -68,6 +76,24 @@ class JapanTrendFetcher:
         if limit < 1:
             raise ValueError("Trend result limit must be at least 1.")
 
+        queries = [query]
+        if query == DEFAULT_JAPAN_TREND_QUERY:
+            queries = DEFAULT_JAPAN_TREND_QUERIES
+
+        for candidate_query in queries:
+            results = self._fetch_screened_results(candidate_query, limit=limit)
+            if results:
+                return TrendBrief(query=candidate_query, results=results)
+
+        raise RuntimeError(
+            "SerpAPI returned no usable screened Google News results."
+        )
+
+    def _fetch_screened_results(
+        self,
+        query: str,
+        limit: int,
+    ) -> list[SearchResult]:
         payload = self._request(
             {
                 "engine": "google",
@@ -79,17 +105,12 @@ class JapanTrendFetcher:
                 "location": "Japan",
                 "tbm": "nws",
                 "tbs": "qdr:d",
-                "num": 10,
+                "num": SERPAPI_CANDIDATE_COUNT,
                 "safe": "active",
             }
         )
-        candidates = self._extract_results(payload, limit=10)
-        results = self._screener.screen(candidates, limit=limit)
-        if not results:
-            raise RuntimeError(
-                "SerpAPI returned no usable screened Google News results."
-            )
-        return TrendBrief(query=query, results=results)
+        candidates = self._extract_results(payload, limit=SERPAPI_CANDIDATE_COUNT)
+        return self._screener.screen(candidates, limit=limit)
 
     def _request(self, params: dict[str, str | int]) -> dict[str, Any]:
         url = f"{SERPAPI_ENDPOINT}?{urlencode(params)}"
