@@ -12,10 +12,13 @@ account using sample posts that you provide. Drafts are written in Japanese.
 - `twitter_bot/style.py`: LangChain style-analysis chain.
 - `twitter_bot/trends.py`: fetches and screens Japan trend context from Google News via SerpAPI.
 - `twitter_bot/generator.py`: LangChain tweet-drafting chain.
+- `twitter_bot/memory.py`: local JSONL memory for recent generated and posted tweets.
 - `twitter_bot/publisher.py`: optional X publishing boundary via Tweepy.
 
 The default flow is safe by design: the bot prints a draft. It only posts when
-you pass `--post` and configure Twitter/X credentials.
+you pass `--post` and configure Twitter/X credentials. Generated drafts and
+post outcomes are remembered in `data/post_history.jsonl` by default, so future
+runs can avoid repeating recent angles and phrasing.
 
 ## Setup
 
@@ -108,6 +111,13 @@ Draft without posting from a saved style guide:
 
 ```bash
 uv run python main.py --style-guide style_guide.txt --topic "launching a weekend side project"
+```
+
+Use a custom memory file or disable memory context for a run:
+
+```bash
+uv run python main.py --style-guide style_guide.txt --topic "launching a weekend side project" --memory-file data/post_history.jsonl
+uv run python main.py --style-guide style_guide.txt --topic "launching a weekend side project" --memory-limit 0
 ```
 
 Publish from a saved style guide:

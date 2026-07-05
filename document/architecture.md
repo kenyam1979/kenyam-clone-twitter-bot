@@ -12,6 +12,7 @@ flowchart TD
     trends[twitter_bot.trends]
     generator[twitter_bot.generator]
     publisher[twitter_bot.publisher]
+    memory[twitter_bot.memory]
     style[twitter_bot.style]
     samples[twitter_bot.samples]
     convert[twitter_bot.convert_samples]
@@ -20,6 +21,7 @@ flowchart TD
     main --> trends
     main --> generator
     main --> publisher
+    main --> memory
     style --> config
     style --> samples
     generator --> config
@@ -253,6 +255,19 @@ flowchart TD
     Extract --> Normalize
     Normalize --> Write
 ```
+
+## Memory
+
+`twitter_bot/memory.py`
+
+| Symbol | Type | Purpose |
+| --- | --- | --- |
+| `DEFAULT_MEMORY_PATH` | constant | Default JSONL history path: `data/post_history.jsonl`. |
+| `TweetMemoryEntry` | dataclass | One generated draft/post memory record. |
+| `build_memory_entry(...)` | function | Creates a timestamped memory entry. |
+| `append_memory_entry(path, entry)` | function | Appends one JSON object line to the memory file. |
+| `load_recent_memory(path, limit)` | function | Reads recent valid JSONL entries, skipping malformed lines. |
+| `format_recent_memory(entries)` | function | Formats recent generated tweets for the drafting prompt. |
 
 ## Publishing
 

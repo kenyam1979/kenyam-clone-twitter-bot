@@ -20,11 +20,14 @@ TWEET_PROMPT = ChatPromptTemplate.from_messages(
             "the sample posts or topic are written in another language. Do not "
             "impersonate another person, do not invent personal experiences, "
             "and do not include unsafe or harassing content. Keep the tweet "
-            "under {max_chars} characters.",
+            "under {max_chars} characters. Use recent generated tweets as memory: "
+            "avoid repeating the same angle, conclusion, opening phrase, or rhythm.",
         ),
         (
             "human",
-            "Style guide:\n{style_guide}\n\nTopic or intent:\n{topic}\n\n"
+            "Style guide:\n{style_guide}\n\n"
+            "Recent generated tweets:\n{recent_context}\n\n"
+            "Topic or intent:\n{topic}\n\n"
             "Return only the tweet text.",
         ),
     ]
@@ -52,6 +55,7 @@ class TweetGenerator:
         style_guide: str,
         topic: str,
         max_chars: int = 280,
+        recent_context: str = "No recent generated tweets are recorded.",
     ) -> TweetDraft:
         if not style_guide.strip():
             raise ValueError("A style guide is required.")
@@ -65,6 +69,7 @@ class TweetGenerator:
                 "style_guide": style_guide.strip(),
                 "topic": topic.strip(),
                 "max_chars": max_chars,
+                "recent_context": recent_context.strip(),
             }
         ).strip()
 

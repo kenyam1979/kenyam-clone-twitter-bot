@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from twitter_bot.config import BotConfig
+from twitter_bot.memory import DEFAULT_MEMORY_PATH
 from twitter_bot.trends import DEFAULT_JAPAN_TREND_QUERY
 
 
@@ -45,6 +46,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum tweet length. Defaults to 280.",
     )
     parser.add_argument(
+        "--memory-file",
+        default=DEFAULT_MEMORY_PATH,
+        help=f"Path to JSONL tweet memory. Defaults to {DEFAULT_MEMORY_PATH}.",
+    )
+    parser.add_argument(
+        "--memory-limit",
+        type=int,
+        default=20,
+        help="Number of recent memory entries to include. Defaults to 20.",
+    )
+    parser.add_argument(
         "--post",
         action="store_true",
         help="Publish to Twitter/X. Without this flag the program only prints a draft.",
@@ -78,20 +90,56 @@ def main() -> None:
             print(f"- {result.title}")
 
     from twitter_bot.generator import TweetGenerator
+    from twitter_bot.memory import (
+        append_memory_entry,
+        build_memory_entry,
+        format_recent_memory,
+        load_recent_memory,
+    )
+
+    recent_context = format_recent_memory(
+        load_recent_memory(args.memory_file, args.memory_limit)
+    )
 
     generator = TweetGenerator(config)
     draft = generator.draft(
         style_guide=style_guide,
         topic=topic,
         max_chars=args.max_chars,
+        recent_context=recent_context,
     )
 
     if args.post:
         from twitter_bot.publisher import XPublisher
 
-        tweet_id = XPublisher(config).post(draft.text)
+        try:
+            tweet_id = XPublisher(config).post(draft.text)
+        except Exception as exc:
+            append_memory_entry(
+                args.memory_file,
+                build_memory_entry(
+                    text=draft.text,
+                    status="post_failed",
+                    topic=topic,
+                    error=str(exc),
+                ),
+            )
+            raise
+        append_memory_entry(
+            args.memory_file,
+            build_memory_entry(
+                text=draft.text,
+                status="posted",
+                topic=topic,
+                tweet_id=tweet_id,
+            ),
+        )
         print(f"Published tweet id: {tweet_id}")
     else:
+        append_memory_entry(
+            args.memory_file,
+            build_memory_entry(text=draft.text, status="drafted", topic=topic),
+        )
         print(draft.text)
 
 
